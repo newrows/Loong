@@ -1,0 +1,21 @@
+<RCC>
+    <qresource prefix="/">
+        <file>image/登录.png</file>
+        <file>image/登录密码.png</file>
+        <file>image/空气检测.png</file>
+        <file>image/实时日志.png</file>
+        <file>image/水.png</file>
+        <file>image/土壤.png</file>
+        <file>image/游戏首页.png</file>
+        <file>image/land.png</file>
+        <file>image/数据统计.png</file>
+        <file>image/图表.png</file>
+        <file>image/开发者管理.png</file>
+        <file>image/右翻页细.png</file>
+        <file>image/左翻页细.png</file>
+        <file>image/左翻页灰.png</file>
+        <file>image/右翻页灰.png</file>
+        <file>image/翻页2.png</file>
+        <file>image/翻页1.png</file>
+    </qresource>
+</RCC>
