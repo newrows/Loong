@@ -8,12 +8,14 @@
 #define Page_Database   4
 #define Page_Logs       5
 #define Page_Us         6
+#define Page_Aqi        7
 #define ENABLE          true
 #define DISABLE         false
 
 
 #include <QWidget>
 #include "login.h"
+
 #include "ui_widget.h"
 
 #include <qmqttclient.h>
@@ -38,6 +40,18 @@
 
 #include <QDateTime>
 #include <QTimer>
+
+#include <QtCharts>
+#include <QBarSet>
+#include <QBarSeries>
+#include <QBarCategoryAxis>
+#include <QChartView>
+#include <QValueAxis>
+#include <QLineSeries>
+#include <QDateTimeAxis>
+
+using namespace QT_CHARTS_NAMESPACE;
+QT_CHARTS_USE_NAMESPACE
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -64,16 +78,30 @@ public:
     void Button_Set(QPushButton *button, bool state);
     void Button_Clk(QPushButton *button, bool state);
 
-    QString Json_String(QJsonObject object, QString keyword);
+    QString Json_String(QJsonObject object, QString keyword, QString m_str);
     int Json_Int(QJsonObject object, QString keyword, int m_info);
+    float Json_Float(QJsonObject object, QString keyword, float m_info);
     bool Json_Bool(QJsonObject object, QString keyword, bool m_info);
 
     void Database_Init();
     void M_Index_Set(int index);
     void Database_Update();
+    void Database_Out(const QString &tableName,const QString &csvFileName);
 
     void Time_Init();
     void Timer_Init();
+
+    void Charts_Config(int num, QValueAxis *(&m_axisX), QValueAxis *(&m_axisY), QLineSeries *(&m_lineSeries), QChart *(&m_chart), QtCharts::QChartView *(&m_ui));
+    void Charts_Init();
+    void Charts_Show_Config(int num, QChart *(&m_chart), QLineSeries *(&m_lineSeries), bool state, int &count);
+    void Charts_Show(int num, bool state);
+    void Charts_Update();
+
+    void Vedio_Starting();
+    void Vedio_Stopping();
+    void Vedio_Receive();
+    void Vedio_Process();
+
 public: //SLOTS
 
 
@@ -118,6 +146,30 @@ private slots:
 
     void on_btn_find_clicked();
 
+    void on_charts_pre_clicked();
+
+    void on_chart_next_clicked();
+
+    void on_air_next_clicked();
+
+    void on_chart_water_pre_clicked();
+
+    void on_chart_water_next_clicked();
+
+    void on_chart_soil_pre_clicked();
+
+    void on_chart_soil_next_clicked();
+
+    void on_chart_air_pre_clicked();
+
+    void on_chart_air_next_clicked();
+
+    void on_btn_vedio_start_clicked();
+
+    void on_btn_vedio_stop_clicked();
+
+    void on_btn_out_clicked();
+
 private:
     Ui::Widget *ui;
     Login m_login;
@@ -146,6 +198,8 @@ private:
     //初始化标志位
     int flag = 0;
     int key1 = 0;
+
+    QString aqoi;
 /*------------------这个部分是定义的变量-----------------------------*/
 
 /*------------------这个部分是定义的变量-----------------------------*/
@@ -172,6 +226,45 @@ private:
     QTimer *m_timer;
     QTimer *m_timer1;
     QTimer *m_timer2;
+
+    //charts
+    int count1 = 0, count2 = 0, count3 = 0, count4 = 0, count5 = 0, count6 = 0, count7 = 0, count8 = 0, count9 = 0;
+    QChart *m_chart1, *m_chart2, *m_chart3, *m_chart4;  //water
+    QChart *m_chart5, *m_chart6;    //soil
+    QChart *m_chart7, *m_chart8, *m_chart9; //air
+
+    bool state1=ENABLE, state2=DISABLE, state3=DISABLE, state4=DISABLE, state5=DISABLE, state6=DISABLE, state7=DISABLE, state8=DISABLE, state9=DISABLE;
+
+    QValueAxis *m_axisX1, *m_axisY1, *m_axisX2, *m_axisY2, *m_axisX3, *m_axisY3, *m_axisX4, *m_axisY4;
+    QValueAxis *m_axisX5, *m_axisY5, *m_axisX6, *m_axisY6;
+    QValueAxis *m_axisX7, *m_axisY7, *m_axisX8, *m_axisY8, *m_axisX9, *m_axisY9;
+
+    QLineSeries *m_lineSeries1, *m_lineSeries2, *m_lineSeries3, *m_lineSeries4;
+    QLineSeries *m_lineSeries5, *m_lineSeries6;
+    QLineSeries *m_lineSeries7, *m_lineSeries8, *m_lineSeries9;
+
+    const int AXIS_MAX_X1 = 10, AXIS_MAX_Y1 = 20;
+    const int AXIS_MAX_X2 = 10, AXIS_MAX_Y2 = 100;
+    const int AXIS_MAX_X3 = 10, AXIS_MAX_Y3 = 10;
+    const int AXIS_MAX_X4 = 10, AXIS_MAX_Y4 = 100;
+    const int AXIS_MAX_X5 = 10, AXIS_MAX_Y5 = 100;
+    const int AXIS_MAX_X6 = 10, AXIS_MAX_Y6 = 50;
+    const int AXIS_MAX_X7 = 10, AXIS_MAX_Y7 = 100;
+    const int AXIS_MAX_X8 = 10, AXIS_MAX_Y8 = 20;
+    const int AXIS_MAX_X9 = 10, AXIS_MAX_Y9 = 1200;
+
+    QDateTime m_time;
+
+    //视频传输
+    bool Vedio_Start = DISABLE;
+    bool Vedio_Stop  = ENABLE;
+
+    QQueue<QByteArray> dataQueue;           //接收数据流
+    QByteArray frameData;
+    QByteArray frameBuffer;
+    QNetworkReply *Client = nullptr;
+    QNetworkAccessManager *Manager;
+    bool startflag = false;
 
 };
 #endif // WIDGET_H

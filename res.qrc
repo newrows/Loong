@@ -17,5 +17,19 @@
         <file>image/右翻页灰.png</file>
         <file>image/翻页2.png</file>
         <file>image/翻页1.png</file>
+        <file>image/上一页.png</file>
+        <file>image/下一页.png</file>
+        <file>image/左翻页.png</file>
+        <file>image/右翻页.png</file>
+        <file>image/首页.jpg</file>
+        <file>image/hand.jpg</file>
+        <file>image/rubbish.jpg</file>
+        <file>image/heart.jpg</file>
+        <file>image/eye.jpg</file>
+        <file>image/water.jpg</file>
+        <file>image/soil.jpg</file>
+        <file>image/air.jpg</file>
+        <file>image/lake.jpg</file>
+        <file>image/fog.jpg</file>
     </qresource>
 </RCC>

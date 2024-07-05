@@ -162,8 +162,11 @@ background-color: rgb(255, 255, 255);</string>
         <property name="maxLength">
          <number>8</number>
         </property>
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
         <property name="placeholderText">
-         <string>请输入账号</string>
+         <string>请输入密码</string>
         </property>
        </widget>
       </item>
