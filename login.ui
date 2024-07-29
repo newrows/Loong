@@ -121,7 +121,7 @@ color: rgb(255, 255, 255);
 border-radius: 6;</string>
         </property>
         <property name="text">
-         <string>退出</string>
+         <string>游客</string>
         </property>
        </widget>
       </item>

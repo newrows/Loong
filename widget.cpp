@@ -9,7 +9,7 @@ Widget::Widget(QWidget *parent)
     , ui(new Ui::Widget)
 {
     ui->setupUi(this);
-    m_login.show();
+//    m_login.show();
 
     All_Init();
 
@@ -22,25 +22,66 @@ Widget::~Widget()
 
 void Widget::All_Init()
 {
-    connect(&m_login, &Login::login_success, [=](){
-        m_login.close();
-        this->show();
-    });
+    connect(&m_login, &Login::login_success1, this, &Widget::Login_Success1);
+    connect(&m_login, &Login::login_success2, this, &Widget::Login_Success2);
 
     ui->stackedWidget->setCurrentIndex(0);
 
-    Mqtt_Init();
+    ui->btn_database->setEnabled(DISABLE);
+    ui->btn_logs->setEnabled(DISABLE);
+    ui->btn_timedata->setEnabled(DISABLE);
+
+    Mqtt_Device_Init();
+//    Mqtt_Wechat_Init();
     Database_Init();
     Time_Init();
     Charts_Init();
 }
 
-void Widget::Mqtt_Init()
+void Widget::Login_Success1()
 {
-//    QString ProductKey      = "k1dvqmKfYdi";
-//    QString DeviceName      = "2k1000";
-//    QString DeviceSecret    = "e90140ff0ce5790bc6e0d831f1b65622";
+    m_login.close();
+    ui->btn_config->setText("当前为管理员身份");
+    if(flag == 0)
+    {
+        flag = 1;
+        QString subscription  = "/k1dl3eJ2RBB/ESPtest/user/get";
+        QString subscription1 = "/k1dl3eJ2RBB/ESPtest/user/get00";
+        m_mqtt_client->subscribe(subscription);
+        m_mqtt_client->subscribe(subscription1);
+        qDebug()<<"ok";
+        connect(m_mqtt_client, &QMQTT::Client::received, this, &Widget::Mqtt_Device_Subscribe);
+        connect(m_mqtt_client, &QMQTT::Client::received, this, &Widget::Mqtt_Device_Subscribe);
+    }
+    Timer_Init();
+    ui->btn_database->setEnabled(ENABLE);
+    ui->btn_logs->setEnabled(ENABLE);
+    ui->btn_timedata->setEnabled(ENABLE);
+}
 
+void Widget::Login_Success2()
+{
+    m_login.close();
+    ui->btn_config->setText("当前为游客身份");
+    if(flag == 0)
+    {
+        flag = 1;
+        QString subscription  = "/k1dl3eJ2RBB/ESPtest/user/get";
+        QString subscription1 = "/k1dl3eJ2RBB/ESPtest/user/get00";
+        m_mqtt_client->subscribe(subscription);
+        m_mqtt_client->subscribe(subscription1);
+        qDebug()<<"ok";
+        connect(m_mqtt_client, &QMQTT::Client::received, this, &Widget::Mqtt_Device_Subscribe);
+        connect(m_mqtt_client, &QMQTT::Client::received, this, &Widget::Mqtt_Device_Subscribe);
+    }
+    Timer_Init();
+    ui->btn_database->setEnabled(DISABLE);
+    ui->btn_logs->setEnabled(DISABLE);
+    ui->btn_timedata->setEnabled(ENABLE);
+}
+
+void Widget::Mqtt_Device_Init()
+{
     QString ProductKey      = "k1dl3eJ2RBB";
     QString DeviceName      = "ESPtest";
     QString DeviceSecret    = "39021df5d0307c8e31a7d9efd83c9e9a";
@@ -67,6 +108,33 @@ void Widget::Mqtt_Init()
 
 }
 
+void Widget::Mqtt_Wechat_Init()
+{
+    QString ProductKey      = "k1dl3eJ2RBB";
+    QString DeviceName      = "ESPtest2";
+    QString DeviceSecret    = "7ecb060320c4eb96c43538ab878a193f";
+
+    QString clientid        = "2k1000";
+    QString RegionId        = "cn-shanghai";
+    QString signmethod      = "hmacsha1";
+
+    QString HostName = ProductKey + ".iot-as-mqtt." + RegionId + ".aliyuncs.com";
+    QString UserName = DeviceName + "&" + ProductKey;
+    QString Password = "clientId"+clientid + "deviceName"+DeviceName + "productKey"+ProductKey;
+    QString ClientId = clientid + "|securemode=3,signmethod=" + signmethod + "|";
+
+    m_mqtt_wechat = new QMQTT::Client(QHostAddress::LocalHost, 1883);
+    m_mqtt_wechat->setHostName(HostName);
+    m_mqtt_wechat->setClientId(ClientId);
+    m_mqtt_wechat->setPort(1883);
+    m_mqtt_wechat->setUsername(UserName);
+    m_mqtt_wechat->setPassword(QMessageAuthenticationCode::hash(Password.toLocal8Bit(), DeviceSecret.toLocal8Bit(),
+                                                                QCryptographicHash::Sha1).toHex());
+    m_mqtt_wechat->setKeepAlive(120);   //在 1.5*Keep Alive 的时间间隔内，没有消息则断开；
+
+    m_mqtt_wechat->connectToHost();
+}
+
 //发送给微信的控制位
 void Widget::Mqtt_Publish()
 {
@@ -89,10 +157,12 @@ void Widget::Mqtt_Publish()
     m_mqtt_client->publish(message);
 }
 
-void Widget::Mqtt_Subscribe(QMQTT::Message message)
+void Widget::Mqtt_Device_Subscribe(QMQTT::Message message)
 {
+//    qDebug()<<"device subscribe";
+
     QByteArray pay_load = message.payload();
-    qDebug()<<pay_load;
+//    qDebug()<<pay_load;
     QJsonParseError jsonError;
     QJsonDocument doc = QJsonDocument::fromJson(pay_load, &jsonError);
 
@@ -115,23 +185,43 @@ void Widget::Mqtt_Subscribe(QMQTT::Message message)
         CO2                 = Json_Int (object, "CO2", CO2);
         smoke               = Json_Int (object, "smoke", smoke);
         light_intensity     = Json_Int (object, "light_intensity", light_intensity);
-//        lighting            = Json_Int (object, "lighting", lighting);
+        lighting            = Json_Int (object, "lighting", lighting);
         light_on            = Json_Bool(object, "light_on", light_on);
         fan_on              = Json_Bool(object, "fan_on", fan_on);
         key1                = Json_Int (object, "key1", key1);
-        aqoi                = Json_String(object, "aqi", aqoi);
     }
 
-    Infomation_Tran();
-    qDebug()<<aqoi;
+    if(key1 == 1)
+    {
+        Infomation_Send();
+        key1 = 0;
+    }
+    Data_Warning();
     Infomation_Show();
-//    if(key1 == 1)
-//    {
-//        Infomation_Send();
-//        key1 = 0;
-//    }
+    Infomation_Tran();
+    Charts_Update();
     Database_Update();
-//    Infomation_Send();
+}
+
+void Widget::Mqtt_Wechat_Subscribe(QMQTT::Message message)
+{
+    qDebug()<<"wechat subscribe";
+
+    QByteArray pay_load = message.payload();
+    qDebug()<<pay_load;
+    QJsonParseError jsonError;
+    QJsonDocument doc = QJsonDocument::fromJson(pay_load, &jsonError);
+
+    //上述为将收到的消息包转化json包格式
+    if (doc.isObject())
+    {
+        QJsonObject object = doc.object();  // 转化为对象
+        aqoi = Json_String(object, "aqi", aqoi);
+    }
+
+    Infomation_Show();
+    Charts_Update();
+    Database_Update();
 }
 
 //发送给下位机的控制位
@@ -180,7 +270,7 @@ void Widget::Infomation_Tran()
     QJsonDocument m_doc;
     m_doc.setObject(m_object);
     QByteArray m_data = m_doc.toJson();
-    qDebug()<<m_data;
+//    qDebug()<<m_data;
     QMQTT::Message message(1, topic, m_data);
     m_mqtt_client->publish(message);
 
@@ -198,16 +288,16 @@ QString Widget::State_Config(bool state)
 
 void Widget::Info_Handling()
 {
-    levl = Sqr_Pow(water_level);
-    temp = Sqr_Pow(water_tempreture);
-    stmp = Sqr_Pow(soil_temperature);
-    smos = Sqr_Pow(soil_moisture);
-    CO   = Sqr_Pow(CO2);
-    smok = Sqr_Pow(smoke);
-    lith = float(light_intensity);
+    levl = water_level * 0.1;
+    temp = water_tempreture * 0.01;//99 - 24;
+    stmp = soil_temperature * 0.1;//* 0.114;
+    smos = soil_moisture;
+    CO   = CO2 * 0.00001;
+    smok = smoke;//-50;
+    lith = light_intensity;
 
     turb = water_turbidity * 3.3 /4096;
-    turb = turb *100 /3.3;
+    turb = turb *100 /3.3 - 80;
     if(turb > 100)  turb = 100;
 
     ph = water_ph * 3.3 /4096;
@@ -266,6 +356,57 @@ void Widget::Button_Clk(QPushButton *button, bool state)
     {
         m_button->setText("ON");
         state = ENABLE;
+    }
+}
+
+void Widget::Data_Iswarn()
+{
+//    if(levl > levl_threshold)   {levl_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(turb > turb_threshold)   {turb_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(temp > temp_threshold)   {temp_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(ph   >   ph_threshold)     {ph_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(stmp > stmp_threshold)   {stmp_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(smos > smos_threshold)     {CO_warning = ENABLE; isWarn = ENABLE; return;}
+//    if(CO   >   CO_threshold)   {smos_warning = ENABLE; isWarn = ENABLE; return;}
+    if(smok > smok_threshold)   {smok_warning = ENABLE; isWarn = ENABLE; return;}
+    if(lith > lith_threshold)   {lith_warning = ENABLE; isWarn = ENABLE; return;}
+
+    levl_warning = DISABLE;
+    turb_warning = DISABLE;
+    temp_warning = DISABLE;
+      ph_warning = DISABLE;
+    stmp_warning = DISABLE;
+      CO_warning = DISABLE;
+    smos_warning = DISABLE;
+    smok_warning = DISABLE;
+    lith_warning = DISABLE;
+}
+
+void Widget::Data_Warning()
+{
+    Data_Iswarn();
+    if(isWarn == ENABLE && isRerutn == DISABLE)
+    {
+        cur_page = ui->stackedWidget->currentIndex();
+        ui->stackedWidget->setCurrentIndex(Page_Aqi);
+        if(smok_warning) ui->lb_warning->setText("警告! 烟雾含量超标！");
+        if(lith_warning) ui->lb_warning->setText("警告! 光照强度过低！");
+
+        if(isAuto == ENABLE)
+        {
+            if(smok_warning)
+                fan_on = ENABLE;
+            else
+                fan_on = DISABLE;
+            if(lith_warning)
+            {
+                lighting = 50;
+                light_on = ENABLE;
+            }
+            else
+                light_on = DISABLE;
+            Infomation_Send();
+        }
     }
 }
 
@@ -447,17 +588,18 @@ void Widget::Timer_Init()
     m_timer1= new QTimer;
     m_timer2= new QTimer;
 
-    m_timer ->setInterval(1200);
+    m_timer ->setInterval(20000);
     m_timer1->setInterval(1500);
 //    m_timer2->setInterval(1000);
 
-//    connect(m_timer,  &QTimer::timeout, this, &Widget::Infomation_Tran);
-    connect(m_timer,  &QTimer::timeout, this, &Widget::Infomation_Send);
+    connect(m_timer,  &QTimer::timeout, [=](){
+        isRerutn = DISABLE;
+    });
+//    connect(m_timer,  &QTimer::timeout, this, &Widget::Infomation_Send);
 //    connect(m_timer,  &QTimer::timeout, this, &Widget::Charts_Show);
-    connect(m_timer1, &QTimer::timeout, this, &Widget::Charts_Update);
-    m_timer ->start();
-    m_timer1->start();
-    //    m_timer2->start();
+//    connect(m_timer1, &QTimer::timeout, this, &Widget::Charts_Update);
+//    m_timer1->start();
+//    m_timer2->start();
 }
 
 void Widget::Charts_Config(int num, QValueAxis *(&m_axisX), QValueAxis *(&m_axisY), QLineSeries *(&m_lineSeries), QChart *(&m_chart), QtCharts::QChartView *(&m_ui))
@@ -639,7 +781,7 @@ void Widget::Vedio_Starting()
     if(Vedio_Start == DISABLE)
         return;
 
-    QString ipAddress = "192.168.0.104";
+    QString ipAddress = "192.168.0.102";
     //视频流的http请求命令格式，例如："http://192.168.1.8:81/stream"
     QNetworkRequest request;
     QString url="http://" + ipAddress + ":80//mjpeg/1";
@@ -711,7 +853,31 @@ void Widget::Vedio_Process()
         frameBuffer.clear();
         QPixmap pps = pixmap.scaled(ui->lb_vedio->width(), ui->lb_vedio->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         ui->lb_vedio->setPixmap(pps);
-     }
+    }
+}
+
+void Widget::Auto_Control()
+{
+    if(isAuto == ENABLE)
+    {
+        ui->btn_filter->setEnabled(DISABLE);
+        ui->btn_oxyen->setEnabled(DISABLE);
+        ui->btn_water1->setEnabled(DISABLE);
+        ui->btn_water2->setEnabled(DISABLE);
+        ui->btn_water_on->setEnabled(DISABLE);
+        ui->btn_blow->setEnabled(DISABLE);
+        ui->light_on->setEnabled(DISABLE);
+    }
+    if(isAuto == DISABLE)
+    {
+        ui->btn_filter->setEnabled(ENABLE);
+        ui->btn_oxyen->setEnabled(ENABLE);
+        ui->btn_water1->setEnabled(ENABLE);
+        ui->btn_water2->setEnabled(ENABLE);
+        ui->btn_water_on->setEnabled(ENABLE);
+        ui->btn_blow->setEnabled(ENABLE);
+        ui->light_on->setEnabled(ENABLE);
+    }
 }
 
 void Widget::on_btn_mainpage_clicked()
@@ -763,15 +929,8 @@ void Widget::on_air_pre_clicked()
 
 void Widget::on_btn_config_clicked()
 {
-    if(flag == 0)
-    {
-        flag = 1;
-        QString subscription="/k1dl3eJ2RBB/ESPtest/user/get";
-        m_mqtt_client->subscribe(subscription);
-        qDebug()<<"ok";
-        connect(m_mqtt_client, &QMQTT::Client::received, this, &Widget::Mqtt_Subscribe);
-    }
-    Timer_Init();
+    m_login.show();
+
 }
 
 void Widget::on_btn_filter_clicked()
@@ -787,7 +946,7 @@ void Widget::on_btn_filter_clicked()
         ui->btn_filter->setText("ON");
     }
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_water1_clicked()
@@ -803,7 +962,7 @@ void Widget::on_btn_water1_clicked()
         ui->btn_water1->setText("ON");
     }
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_water2_clicked()
@@ -819,7 +978,7 @@ void Widget::on_btn_water2_clicked()
         ui->btn_water2->setText("ON");
     }
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_oxyen_clicked()
@@ -835,7 +994,7 @@ void Widget::on_btn_oxyen_clicked()
         ui->btn_oxyen->setText("ON");
     }
     Mqtt_Publish();
-//    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_water_on_clicked()
@@ -851,7 +1010,7 @@ void Widget::on_btn_water_on_clicked()
         ui->btn_water_on->setText("ON");
     }
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_blow_clicked()
@@ -867,7 +1026,7 @@ void Widget::on_btn_blow_clicked()
         ui->btn_blow->setText("ON");
     }
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_light_on_clicked()
@@ -875,7 +1034,7 @@ void Widget::on_light_on_clicked()
     light_on = ENABLE;
     lighting = ui->sld_lighting->value();
     Mqtt_Publish();
-    //    Infomation_Send();
+    Infomation_Send();
 }
 
 void Widget::on_btn_update_clicked()
@@ -939,7 +1098,7 @@ void Widget::on_btn_find_clicked()
 
 void Widget::on_charts_pre_clicked()
 {
-    ui->stackedWidget->setCurrentIndex(Page_Air);
+//    ui->stackedWidget->setCurrentIndex(Page_Air);
 }
 
 void Widget::on_chart_next_clicked()
@@ -948,7 +1107,7 @@ void Widget::on_chart_next_clicked()
 
 void Widget::on_air_next_clicked()
 {
-    ui->stackedWidget->setCurrentIndex(Page_Aqi);
+//    ui->stackedWidget->setCurrentIndex(Page_Aqi);
 }
 
 void Widget::on_chart_water_pre_clicked()
@@ -1044,4 +1203,31 @@ void Widget::on_btn_vedio_stop_clicked()
 void Widget::on_btn_out_clicked()
 {
     Database_Out("Newrows", "Newrows.csv");
+}
+
+void Widget::on_pushButton_clicked()
+{
+    if(cur_page == Page_Aqi)
+        ui->stackedWidget->setCurrentIndex(Page_Main);
+    else
+        ui->stackedWidget->setCurrentIndex(cur_page);
+    isRerutn = ENABLE;
+    isWarn = DISABLE;
+    m_timer ->start();
+
+}
+
+void Widget::on_btn_config_2_clicked()
+{
+    if(isAuto == ENABLE)
+    {
+        isAuto = DISABLE;
+        ui->btn_config_2->setText("手动模式");
+        Auto_Control();
+        return;
+    }
+    isAuto = ENABLE;
+    ui->btn_config_2->setText("自动模式");
+    Auto_Control();
+    return;
 }

@@ -12,7 +12,8 @@ class Login : public QWidget
     Q_OBJECT
 
 signals:
-    void login_success();
+    void login_success1();
+    void login_success2();
 
 public:
     explicit Login(QWidget *parent = nullptr);

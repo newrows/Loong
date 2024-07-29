@@ -66,9 +66,13 @@ public:
     ~Widget();
 
     void All_Init();
-    void Mqtt_Init();
+    void Login_Success1();
+    void Login_Success2();
+    void Mqtt_Device_Init();
+    void Mqtt_Wechat_Init();
     void Mqtt_Publish();
-    void Mqtt_Subscribe(QMQTT::Message message);
+    void Mqtt_Device_Subscribe(QMQTT::Message message);
+    void Mqtt_Wechat_Subscribe(QMQTT::Message message);
     void Infomation_Send();
     void Infomation_Tran();
     QString State_Config(bool state);
@@ -78,6 +82,8 @@ public:
     void Button_Set(QPushButton *button, bool state);
     void Button_Clk(QPushButton *button, bool state);
 
+    void Data_Iswarn();
+    void Data_Warning();
     QString Json_String(QJsonObject object, QString keyword, QString m_str);
     int Json_Int(QJsonObject object, QString keyword, int m_info);
     float Json_Float(QJsonObject object, QString keyword, float m_info);
@@ -102,8 +108,9 @@ public:
     void Vedio_Receive();
     void Vedio_Process();
 
-public: //SLOTS
+    void Auto_Control();
 
+public: //SLOTS
 
 private slots:
     void on_btn_mainpage_clicked();
@@ -170,6 +177,10 @@ private slots:
 
     void on_btn_out_clicked();
 
+    void on_pushButton_clicked();
+
+    void on_btn_config_2_clicked();
+
 private:
     Ui::Widget *ui;
     Login m_login;
@@ -203,19 +214,36 @@ private:
 /*------------------这个部分是定义的变量-----------------------------*/
 
 /*------------------这个部分是定义的变量-----------------------------*/
-    float levl = 0;
-    float turb = 0;
-    float temp = 0;
-    float ph   = 0;
-    float stmp = 0;
-    float smos = 0;
-    float CO  = 0;
-    float smok = 0;
-    float lith = 0;
+    float levl = 0, levl_threshold = 0;
+    float turb = 0, turb_threshold = 0;
+    float temp = 0, temp_threshold = 0;
+    float ph   = 0,   ph_threshold = 0;
+    float stmp = 0, stmp_threshold = 0;
+    float smos = 0, smos_threshold = 0;
+    float CO   = 0,   CO_threshold = 0;
+    float smok = 0, smok_threshold = 120;
+    float lith = 0, lith_threshold = 200;
+
+    int cur_page;
+
+    bool levl_warning = DISABLE;
+    bool turb_warning = DISABLE;
+    bool temp_warning = DISABLE;
+    bool   ph_warning = DISABLE;
+    bool stmp_warning = DISABLE;
+    bool   CO_warning = DISABLE;
+    bool smos_warning = DISABLE;
+    bool smok_warning = DISABLE;
+    bool lith_warning = DISABLE;
+    bool isWarn = DISABLE;
+    bool isRerutn = DISABLE;
+
+    bool isAuto = DISABLE;
 /*------------------这个部分是定义的变量-----------------------------*/
 
 
     QMQTT::Client *m_mqtt_client;
+    QMQTT::Client *m_mqtt_wechat;
 
     //数据库
     QSqlDatabase m_database;
@@ -243,15 +271,15 @@ private:
     QLineSeries *m_lineSeries5, *m_lineSeries6;
     QLineSeries *m_lineSeries7, *m_lineSeries8, *m_lineSeries9;
 
-    const int AXIS_MAX_X1 = 10, AXIS_MAX_Y1 = 20;
-    const int AXIS_MAX_X2 = 10, AXIS_MAX_Y2 = 100;
+    const int AXIS_MAX_X1 = 10, AXIS_MAX_Y1 = 40;
+    const int AXIS_MAX_X2 = 10, AXIS_MAX_Y2 = 30;
     const int AXIS_MAX_X3 = 10, AXIS_MAX_Y3 = 10;
-    const int AXIS_MAX_X4 = 10, AXIS_MAX_Y4 = 100;
-    const int AXIS_MAX_X5 = 10, AXIS_MAX_Y5 = 100;
-    const int AXIS_MAX_X6 = 10, AXIS_MAX_Y6 = 50;
-    const int AXIS_MAX_X7 = 10, AXIS_MAX_Y7 = 100;
-    const int AXIS_MAX_X8 = 10, AXIS_MAX_Y8 = 20;
-    const int AXIS_MAX_X9 = 10, AXIS_MAX_Y9 = 1200;
+    const int AXIS_MAX_X4 = 10, AXIS_MAX_Y4 = 50;
+    const int AXIS_MAX_X5 = 10, AXIS_MAX_Y5 = 50;
+    const int AXIS_MAX_X6 = 10, AXIS_MAX_Y6 = 800;
+    const int AXIS_MAX_X7 = 10, AXIS_MAX_Y7 = 0.5;
+    const int AXIS_MAX_X8 = 10, AXIS_MAX_Y8 = 80;
+    const int AXIS_MAX_X9 = 10, AXIS_MAX_Y9 = 600;
 
     QDateTime m_time;
 
